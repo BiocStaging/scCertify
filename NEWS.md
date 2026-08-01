@@ -1,4 +1,4 @@
-# scCertify 0.99.3
+# scCertify 0.99.4
 
 ## Changes in response to Bioconductor review
 
