@@ -51,7 +51,7 @@ colnames(pca_embedding) <- paste0("PC_", 1:5)
 toy_seurat[["pca"]] <- SeuratObject::CreateDimReducObject(
   embeddings = pca_embedding,
   key = "PC_",
-  assay = DefaultAssay(toy_seurat)
+  assay = SeuratObject::DefaultAssay(toy_seurat)
 )
 
 ##############################

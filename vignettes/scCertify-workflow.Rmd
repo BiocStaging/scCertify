@@ -12,8 +12,20 @@ vignette: >
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
     collapse = TRUE,
-    comment = "#>"
+    comment = "#>",
+    warning = FALSE,
+    message = FALSE
 )
+
+## Optional dependencies used to build the fully worked example below.
+## If any are unavailable, the corresponding chunks are skipped rather
+## than failing, but every chunk still shows exactly what would run.
+have_seurat  <- requireNamespace("Seurat", quietly = TRUE)
+have_ucell   <- requireNamespace("UCell", quietly = TRUE)
+have_fnn     <- requireNamespace("FNN", quietly = TRUE)
+have_entropy <- requireNamespace("entropy", quietly = TRUE)
+
+run_demo <- have_seurat && have_ucell && have_fnn && have_entropy
 ```
 
 # Introduction
@@ -62,51 +74,85 @@ A typical scCertify workflow consists of:
 
 The package supports both **Seurat** and **SingleCellExperiment** objects through a common interface.
 
+To make every step below runnable, we first build a small simulated
+`Seurat` object with predicted labels already assigned, mirroring what
+your data would look like after running an external annotation method
+(e.g. `SingleR`, `Azimuth`, or manual marker-based annotation).
+
+```{r simulate-data, eval=run_demo}
+set.seed(42)
+
+n_genes <- 50
+n_cells <- 40
+
+counts <- matrix(
+    rpois(n_genes * n_cells, lambda = 5),
+    nrow = n_genes,
+    ncol = n_cells
+)
+
+rownames(counts) <- paste0("Gene", seq_len(n_genes))
+colnames(counts) <- paste0("Cell", seq_len(n_cells))
+
+object <- Seurat::CreateSeuratObject(counts = counts)
+
+object$predicted_label <- rep(
+    c("T cell", "B cell"),
+    each = n_cells / 2
+)
+
+object <- Seurat::NormalizeData(object, verbose = FALSE)
+object <- Seurat::FindVariableFeatures(object, verbose = FALSE)
+object <- Seurat::ScaleData(object, verbose = FALSE)
+object <- Seurat::RunPCA(object, npcs = 10, verbose = FALSE)
+
+object
+```
+
 # Input Requirements
 
-The input object should already contain predicted cell labels.
+The input object should already contain predicted cell labels, stored
+in a metadata column (default: `predicted_label`).
 
 For Seurat objects:
 
-```{r seurat-metadata, eval=FALSE}
+```{r seurat-metadata, eval=run_demo}
 head(object@meta.data)
 ```
 
-For SingleCellExperiment objects:
+For SingleCellExperiment objects, the same column would live in `colData()`:
+
+```{r sce-metadata, eval=FALSE}
+head(SummarizedExperiment::colData(object))
+```
+
+A marker gene database is supplied as a named list, with one element per
+predicted cell type:
 
 ```{r marker-list}
 markers <- list(
-  "T cell" = c("CD3D", "CD3E", "TRBC1"),
-  "B cell" = c("MS4A1", "CD79A", "CD79B"),
-  "Monocyte" = c("LYZ", "S100A8", "S100A9")
+  "T cell" = c("Gene1", "Gene2", "Gene3"),
+  "B cell" = c("Gene4", "Gene5", "Gene6")
 )
 
 markers
 ```
 
-The metadata should include a column containing predicted labels (default: `predicted_label`).
-
-# Marker Database
-
-Marker genes are supplied as a named list.
-
-```{r marker-database, eval=FALSE}
-markers <- list(
-    "T cell" = c("CD3D","CD3E","TRBC1"),
-    "B cell" = c("MS4A1","CD79A","CD79B"),
-    "Monocyte" = c("LYZ","S100A8","S100A9")
-)
-```
+(In the simulated object above, `predicted_label` already matches
+these names exactly; `match_labels()`, demonstrated later, is what lets
+looser real-world labels such as `"T_cells"` still match `"T cell"`.)
 
 # Marker Consistency Score
 
 Marker consistency evaluates whether a cell expresses genes expected for its predicted identity. scCertify uses the UCell algorithm to compute robust rank-based enrichment scores.
 
-```{r marker-score, eval=FALSE}
+```{r marker-score, eval=run_demo}
 marker_scores <- marker_score(
     object,
     markers
 )
+
+head(marker_scores)
 ```
 
 Higher scores indicate stronger molecular support for the assigned annotation.
@@ -115,29 +161,63 @@ Higher scores indicate stronger molecular support for the assigned annotation.
 
 Correctly annotated cells generally occur near cells of the same identity in low-dimensional space.
 
-```{r neighbor-score, eval=FALSE}
+```{r neighbor-score, eval=run_demo}
 neighbor_scores <- neighbor_score(
     object
 )
+
+head(neighbor_scores)
 ```
 
 Neighborhood agreement ranges from 0 to 1, where larger values indicate greater agreement with nearby cells.
 
 # Entropy-Based Uncertainty
 
-Entropy provides a quantitative measure of annotation uncertainty.
+Entropy provides a quantitative measure of annotation uncertainty. Unlike `marker_score()` and `neighbor_score()`, `entropy_score()` operates on a **numeric score matrix** (for example, per-cell prediction probabilities across candidate labels from your annotation method) rather than directly on the Seurat/SingleCellExperiment object.
 
-```{r entropy-score, eval=FALSE}
-object <- entropy_score(
-    object
+```{r entropy-score, eval=have_entropy}
+score_matrix <- matrix(
+    runif(20),
+    nrow = 5
 )
+
+entropy_score(score_matrix)
+```
+
+For our simulated dataset, we treat each cell as having a two-class
+prediction-probability row (as if from an external classifier), compute
+entropy on that matrix, and normalize it to `[0, 1]` before storing it
+on the object as `entropy_norm`. This is the column `cell_certify()`
+expects to find.
+
+```{r entropy-norm, eval=run_demo}
+prob_matrix <- matrix(
+    runif(n_cells * 2, min = 0.1, max = 1),
+    ncol = 2
+)
+
+raw_entropy <- entropy_score(prob_matrix)
+
+object$entropy_norm <- raw_entropy / log(ncol(prob_matrix))
+
+head(object$entropy_norm)
 ```
 
 Low entropy indicates confident predictions, whereas high entropy suggests ambiguous assignments.
 
+scCertify does not currently ship its own doublet detector; supply a
+`doublet_score` column from a tool such as `scDblFinder` if available.
+Here we simulate one so `cell_certify()` has something to use:
+
+```{r doublet-score, eval=run_demo}
+object$doublet_score <- runif(n_cells, min = 0, max = 0.3)
+```
+
+If `entropy_norm` or `doublet_score` is missing entirely, `cell_certify()` will still run: it substitutes zeros and issues a warning rather than failing.
+
 # Computing Confidence Scores
 
-The final confidence score integrates all available evidence.
+The final confidence score integrates all available evidence via `cell_certify()`, which internally recomputes marker and neighborhood scores, combines them with `entropy_norm` and `doublet_score`, and adds the results back onto the object. You do not need to call `marker_score()` and `neighbor_score()` separately in practice&mdash;they were shown above only to illustrate what each component measures.
 
 The default weighting scheme is:
 
@@ -148,6 +228,37 @@ The default weighting scheme is:
 | Entropy | 20% |
 | Doublet penalty | 10% |
 
+```{r cell-certify, eval=run_demo}
+object <- cell_certify(
+    object,
+    markers
+)
+
+head(
+    object@meta.data[
+        ,
+        c(
+            "predicted_label",
+            "marker_score",
+            "neighbor_score",
+            "entropy_norm",
+            "doublet_score",
+            "confidence_score",
+            "confidence_class"
+        )
+    ]
+)
+```
+
+The resulting metadata include:
+
+- `marker_score`
+- `neighbor_score`
+- `confidence_score`
+- `confidence_class`
+
+`classify_confidence()` is what turns raw scores into these classes, and can be used on its own with any numeric vector of scores:
+
 ```{r confidence-classification}
 scores <- c(0.15, 0.55, 0.92)
 
@@ -157,24 +268,9 @@ data.frame(
 )
 ```
 
-The resulting metadata include:
+For SingleCellExperiment objects, the equivalent metadata would be added to `colData()`:
 
-- marker_score
-- neighbor_score
-- confidence_score
-- confidence_class
-
-For Seurat objects:
-
-```{r classify-confidence}
-scores <- c(0.2, 0.6, 0.9)
-
-classify_confidence(scores)
-```
-
-For SingleCellExperiment objects:
-
-```{r sce-metadata, eval=FALSE}
+```{r sce-metadata-result, eval=FALSE}
 head(
     SummarizedExperiment::colData(object)
 )
@@ -182,20 +278,22 @@ head(
 
 # Custom Confidence Thresholds
 
-Confidence classes can be customized.
+Confidence classes can be customized by changing the moderate/high thresholds passed to `cell_certify()`:
 
-```{r custom-thresholds, eval=FALSE}
-object <- cell_certify(
+```{r custom-thresholds, eval=run_demo}
+object_custom <- cell_certify(
     object,
     markers,
     moderate_threshold = 0.4,
     high_threshold = 0.75
 )
+
+table(object_custom$confidence_class)
 ```
 
 # Explaining Confidence
 
-Individual cells can be inspected using:
+Two small helper functions support the scoring pipeline and can be used independently:
 
 ```{r helper-functions}
 calibrate_confidence(
@@ -208,10 +306,21 @@ match_labels(
 )
 ```
 
-To understand the major contributors to a confidence score:
+`calibrate_confidence()` converts raw scores into percentile ranks, and `match_labels()` matches loosely-formatted predicted labels (e.g. underscores, plural forms) against the names of your marker database.
 
-```{r explain-confidence, eval=FALSE}
+To understand the major contributors to a single cell's confidence score, use `explain_confidence()`:
+
+```{r explain-confidence, eval=run_demo}
 explain_confidence(
+    object,
+    cell_id = "Cell1"
+)
+```
+
+For a fuller, printed summary of a single cell&mdash;including its predicted label and every component score&mdash;use `explain_cell()`:
+
+```{r explain-cell, eval=run_demo}
+explain_cell(
     object,
     cell_id = "Cell1"
 )
