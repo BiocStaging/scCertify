@@ -16,60 +16,50 @@
 #' added to the metadata.
 #'
 #' @examples
-#' if (requireNamespace("Seurat", quietly = TRUE)) {
+#' if (
+#'   requireNamespace("SingleCellExperiment", quietly = TRUE) &&
+#'   requireNamespace("SummarizedExperiment", quietly = TRUE)
+#' ) {
+#'
+#'   set.seed(123)
+#'
 #'   counts <- matrix(
 #'     rpois(1000, lambda = 5),
 #'     nrow = 50,
-#'     ncol = 20
+#'     ncol = 20,
+#'     dimnames = list(
+#'       paste0("Gene", seq_len(50)),
+#'       paste0("Cell", seq_len(20))
+#'     )
 #'   )
 #'
-#'   rownames(counts) <- paste0("Gene", seq_len(50))
-#'   colnames(counts) <- paste0("Cell", seq_len(20))
-#'
-#'   obj <- Seurat::CreateSeuratObject(
-#'     counts = counts
+#'   sce <- SingleCellExperiment::SingleCellExperiment(
+#'     assays = list(
+#'       logcounts = log1p(counts)
+#'     )
 #'   )
 #'
-#'   obj$predicted_label <- rep(
-#'     c("T cell", "B cell"),
-#'     each = 10
-#'   )
-#'
-#'   obj <- Seurat::NormalizeData(
-#'     obj,
-#'     verbose = FALSE
-#'   )
-#'
-#'   obj <- Seurat::FindVariableFeatures(
-#'     obj,
-#'     verbose = FALSE
-#'   )
-#'
-#'   obj <- Seurat::ScaleData(
-#'     obj,
-#'     verbose = FALSE
-#'   )
-#'
-#'   obj <- Seurat::RunPCA(
-#'     obj,
-#'     npcs = 10,
-#'     verbose = FALSE
-#'   )
-#'
-#'   obj$entropy_norm <- runif(ncol(obj))
-#'   obj$doublet_score <- runif(ncol(obj))
+#'   SummarizedExperiment::colData(sce)$predicted_label <-
+#'     rep(c("T cell", "B cell"), each = 10)
 #'
 #'   markers <- list(
 #'     "T cell" = c("Gene1", "Gene2"),
 #'     "B cell" = c("Gene3", "Gene4")
 #'   )
 #'
-#'   obj <- cell_certify(
-#'     obj,
+#'   SingleCellExperiment::reducedDim(sce, "PCA") <- prcomp(
+#'     t(counts),
+#'     rank. = 5
+#'   )$x
+#'
+#'   sce <- cell_certify(
+#'     sce,
 #'     markers
 #'   )
 #'
-#'   head(obj$confidence_score)
+#'   head(
+#'     SummarizedExperiment::colData(sce)$confidence_score
+#'   )
 #' }
 #'
 #' @export

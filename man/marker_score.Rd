@@ -21,28 +21,29 @@ Uses UCell enrichment scoring
 for marker evaluation.
 }
 \examples{
-if (requireNamespace("Seurat", quietly = TRUE)) {
+if (requireNamespace("SingleCellExperiment", quietly = TRUE) &&
+    requireNamespace("SummarizedExperiment", quietly = TRUE)) {
+
+  set.seed(123)
+
   counts <- matrix(
     rpois(200, lambda = 5),
-    nrow = 20
+    nrow = 20,
+    ncol = 10,
+    dimnames = list(
+      paste0("Gene", seq_len(20)),
+      paste0("Cell", seq_len(10))
+    )
   )
 
-  rownames(counts) <- paste0("Gene", seq_len(20))
-  colnames(counts) <- paste0("Cell", seq_len(10))
-
-  obj <- Seurat::CreateSeuratObject(
-    counts = counts
+  sce <- SingleCellExperiment::SingleCellExperiment(
+    assays = list(
+      logcounts = log1p(counts)
+    )
   )
 
-  obj <- Seurat::NormalizeData(
-    obj,
-    verbose = FALSE
-  )
-
-  obj$predicted_label <- rep(
-    c("T cell", "B cell"),
-    each = 5
-  )
+  SummarizedExperiment::colData(sce)$predicted_label <-
+    rep(c("T cell", "B cell"), each = 5)
 
   markers <- list(
     "T cell" = c("Gene1", "Gene2"),
@@ -50,8 +51,9 @@ if (requireNamespace("Seurat", quietly = TRUE)) {
   )
 
   scores <- marker_score(
-    obj,
-    markers
+    sce,
+    markers,
+    label_column = "predicted_label"
   )
 
   head(scores)

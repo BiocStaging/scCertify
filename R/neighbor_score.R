@@ -11,47 +11,38 @@
 #' @return Numeric vector of neighborhood agreement scores.
 #'
 #' @examples
-#' if (requireNamespace("Seurat", quietly = TRUE)) {
+#' if (
+#'   requireNamespace("SingleCellExperiment", quietly = TRUE) &&
+#'   requireNamespace("SummarizedExperiment", quietly = TRUE)
+#' ) {
+#'
+#'   set.seed(123)
+#'
 #'   counts <- matrix(
 #'     rpois(1000, lambda = 5),
 #'     nrow = 50,
-#'     ncol = 20
+#'     ncol = 20,
+#'     dimnames = list(
+#'       paste0("Gene", seq_len(50)),
+#'       paste0("Cell", seq_len(20))
+#'     )
 #'   )
 #'
-#'   rownames(counts) <- paste0("Gene", seq_len(50))
-#'   colnames(counts) <- paste0("Cell", seq_len(20))
-#'
-#'   obj <- Seurat::CreateSeuratObject(
-#'     counts = counts
+#'   sce <- SingleCellExperiment::SingleCellExperiment(
+#'     assays = list(
+#'       logcounts = log1p(counts)
+#'     )
 #'   )
 #'
-#'   obj$predicted_label <- rep(
-#'     c("T cell", "B cell"),
-#'     each = 10
-#'   )
+#'   SummarizedExperiment::colData(sce)$predicted_label <-
+#'     rep(c("T cell", "B cell"), each = 10)
 #'
-#'   obj <- Seurat::NormalizeData(
-#'     obj,
-#'     verbose = FALSE
-#'   )
+#'   SingleCellExperiment::reducedDim(sce, "PCA") <- prcomp(
+#'     t(counts),
+#'     rank. = 5
+#'   )$x
 #'
-#'   obj <- Seurat::FindVariableFeatures(
-#'     obj,
-#'     verbose = FALSE
-#'   )
-#'
-#'   obj <- Seurat::ScaleData(
-#'     obj,
-#'     verbose = FALSE
-#'   )
-#'
-#'   obj <- Seurat::RunPCA(
-#'     obj,
-#'     npcs = 10,
-#'     verbose = FALSE
-#'   )
-#'
-#'   scores <- neighbor_score(obj)
+#'   scores <- neighbor_score(sce)
 #'
 #'   head(scores)
 #' }

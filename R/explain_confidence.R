@@ -10,31 +10,46 @@
 #' confidence score.
 #'
 #' @examples
-#' if (requireNamespace("Seurat", quietly = TRUE)) {
+#' if (
+#'   requireNamespace("SingleCellExperiment", quietly = TRUE) &&
+#'   requireNamespace("SummarizedExperiment", quietly = TRUE)
+#' ) {
+#'
+#'   set.seed(123)
+#'
 #'   counts <- matrix(
 #'     rpois(200, lambda = 5),
-#'     nrow = 20
+#'     nrow = 20,
+#'     ncol = 10,
+#'     dimnames = list(
+#'       paste0("Gene", seq_len(20)),
+#'       paste0("Cell", seq_len(10))
+#'     )
 #'   )
 #'
-#'   rownames(counts) <- paste0("Gene", seq_len(20))
-#'   colnames(counts) <- paste0("Cell", seq_len(10))
-#'
-#'   obj <- Seurat::CreateSeuratObject(
-#'     counts = counts
+#'   sce <- SingleCellExperiment::SingleCellExperiment(
+#'     assays = list(
+#'       logcounts = log1p(counts)
+#'     )
 #'   )
 #'
-#'   obj$predicted_label <- rep(
-#'     c("T cell", "B cell"),
-#'     each = 5
-#'   )
+#'   SummarizedExperiment::colData(sce)$predicted_label <-
+#'     rep(c("T cell", "B cell"), each = 5)
 #'
-#'   obj$marker_score <- runif(ncol(obj))
-#'   obj$neighbor_score <- runif(ncol(obj))
-#'   obj$entropy_norm <- runif(ncol(obj))
-#'   obj$doublet_score <- runif(ncol(obj))
+#'   SummarizedExperiment::colData(sce)$marker_score <-
+#'     runif(ncol(sce))
+#'
+#'   SummarizedExperiment::colData(sce)$neighbor_score <-
+#'     runif(ncol(sce))
+#'
+#'   SummarizedExperiment::colData(sce)$entropy_norm <-
+#'     runif(ncol(sce))
+#'
+#'   SummarizedExperiment::colData(sce)$doublet_score <-
+#'     runif(ncol(sce))
 #'
 #'   explain_confidence(
-#'     obj,
+#'     sce,
 #'     cell_id = "Cell1"
 #'   )
 #' }
