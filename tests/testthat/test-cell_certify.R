@@ -1,7 +1,6 @@
 test_that(
   "cell_certify works for Seurat",
   {
-
     obj <- toy_seurat
 
     obj$entropy_norm <- runif(
@@ -13,12 +12,10 @@ test_that(
     )
 
     obj <- suppressWarnings(
-
       cell_certify(
         obj,
         toy_markers
       )
-
     )
 
     expect_true(
@@ -35,14 +32,12 @@ test_that(
       obj$confidence_score,
       ncol(obj)
     )
-
   }
 )
 
 test_that(
   "cell_certify works for SingleCellExperiment",
   {
-
     obj <- toy_sce
 
     SummarizedExperiment::colData(
@@ -56,54 +51,39 @@ test_that(
       runif(ncol(obj))
 
     obj <- suppressWarnings(
-
       cell_certify(
         obj,
         toy_markers
       )
-
     )
 
     expect_true(
-
       "confidence_score" %in%
 
         colnames(
-
           SummarizedExperiment::colData(obj)
-
         )
-
     )
 
     expect_true(
-
       "confidence_class" %in%
 
         colnames(
-
           SummarizedExperiment::colData(obj)
-
         )
-
     )
-
   }
 )
 
 test_that(
   "cell_certify errors for missing labels",
   {
-
     expect_error(
-
       cell_certify(
         toy_seurat,
         toy_markers,
         label_column = "missing"
       )
-
     )
-
   }
 )

@@ -86,17 +86,14 @@ SingleCellExperiment::reducedDim(
 ##############################
 
 toy_markers <- list(
-
   "T cell" = c(
     "Gene1",
     "Gene2",
     "Gene3"
   ),
-
   "B cell" = c(
     "Gene4",
     "Gene5",
     "Gene6"
   )
-
 )

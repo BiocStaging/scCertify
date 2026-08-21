@@ -1,24 +1,18 @@
 marker_score_core <- function(
-    object,
-    markers,
-    label_column,
-    object_type
+  object,
+  markers,
+  label_column,
+  object_type
 ) {
-
   if (object_type == "Seurat") {
-
     metadata <- object@meta.data
-
   } else {
-
     metadata <- as.data.frame(
       SummarizedExperiment::colData(object)
     )
-
   }
 
   if (!label_column %in% colnames(metadata)) {
-
     stop(
       sprintf(
         "'%s' not found in object metadata.",
@@ -26,7 +20,6 @@ marker_score_core <- function(
       ),
       call. = FALSE
     )
-
   }
 
   labels <- metadata[[label_column]]
@@ -36,14 +29,12 @@ marker_score_core <- function(
   gene_names <- rownames(object)
 
   for (label in unique(labels)) {
-
     matched_label <- match_labels(
       label,
       names(markers)
     )
 
     if (is.na(matched_label)) {
-
       warning(
         sprintf(
           "No ontology match for: %s",
@@ -53,7 +44,6 @@ marker_score_core <- function(
       )
 
       next
-
     }
 
     genes <- markers[[matched_label]]
@@ -63,7 +53,6 @@ marker_score_core <- function(
     ]
 
     if (length(genes) == 0) {
-
       warning(
         sprintf(
           "No marker genes found for: %s",
@@ -73,7 +62,6 @@ marker_score_core <- function(
       )
 
       next
-
     }
 
     signature_name <- paste0(
@@ -85,7 +73,6 @@ marker_score_core <- function(
     feature_list[[signature_name]] <- genes
 
     if (object_type == "Seurat") {
-
       object <- UCell::AddModuleScore_UCell(
         object,
         features = feature_list,
@@ -105,9 +92,7 @@ marker_score_core <- function(
         idx,
         score_column
       ]
-
     } else {
-
       object <- UCell::ScoreSignatures_UCell(
         object,
         features = feature_list,
@@ -134,20 +119,15 @@ marker_score_core <- function(
       idx <- which(labels == label)
 
       if (score_row %in% rownames(u_scores)) {
-
         scores[idx] <- as.numeric(
           u_scores[
             score_row,
             idx
           ]
         )
-
       }
-
     }
-
   }
 
   scores
-
 }

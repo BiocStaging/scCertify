@@ -1,5 +1,4 @@
 test_that("explain_cell returns interpretation", {
-
   obj <- toy_seurat
 
   obj$confidence_score <- 0.8
@@ -14,18 +13,13 @@ test_that("explain_cell returns interpretation", {
 
   expect_type(out, "character")
   expect_true(length(out) >= 1)
-
 })
 
 test_that("explain_cell errors for unknown cell", {
-
   expect_error(
-
     explain_cell(
       toy_seurat,
       "UnknownCell"
     )
-
   )
-
 })

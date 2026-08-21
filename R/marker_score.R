@@ -10,54 +10,48 @@
 #' @return Numeric vector of marker consistency scores.
 #'
 #' @examples
-#' if (requireNamespace("SingleCellExperiment", quietly = TRUE) &&
-#'     requireNamespace("SummarizedExperiment", quietly = TRUE)) {
+#' set.seed(123)
 #'
-#'   set.seed(123)
-#'
-#'   counts <- matrix(
-#'     rpois(200, lambda = 5),
-#'     nrow = 20,
-#'     ncol = 10,
-#'     dimnames = list(
-#'       paste0("Gene", seq_len(20)),
-#'       paste0("Cell", seq_len(10))
-#'     )
+#' counts <- matrix(
+#'   rpois(200, lambda = 5),
+#'   nrow = 20,
+#'   ncol = 10,
+#'   dimnames = list(
+#'     paste0("Gene", seq_len(20)),
+#'     paste0("Cell", seq_len(10))
 #'   )
+#' )
 #'
-#'   sce <- SingleCellExperiment::SingleCellExperiment(
-#'     assays = list(
-#'       logcounts = log1p(counts)
-#'     )
+#' sce <- SingleCellExperiment::SingleCellExperiment(
+#'   assays = list(
+#'     logcounts = log1p(counts)
 #'   )
+#' )
 #'
-#'   SummarizedExperiment::colData(sce)$predicted_label <-
-#'     rep(c("T cell", "B cell"), each = 5)
+#' SummarizedExperiment::colData(sce)$predicted_label <-
+#'   rep(c("T cell", "B cell"), each = 5)
 #'
-#'   markers <- list(
-#'     "T cell" = c("Gene1", "Gene2"),
-#'     "B cell" = c("Gene3", "Gene4")
-#'   )
+#' markers <- list(
+#'   "T cell" = c("Gene1", "Gene2"),
+#'   "B cell" = c("Gene3", "Gene4")
+#' )
 #'
-#'   scores <- marker_score(
-#'     sce,
-#'     markers,
-#'     label_column = "predicted_label"
-#'   )
+#' scores <- marker_score(
+#'   sce,
+#'   markers,
+#'   label_column = "predicted_label"
+#' )
 #'
-#'   head(scores)
-#' }
+#' head(scores)
 #'
 #' @export
 
 marker_score <- function(
-    object,
-    markers,
-    label_column = "predicted_label"
+  object,
+  markers,
+  label_column = "predicted_label"
 ) {
-
   if (inherits(object, "Seurat")) {
-
     return(
       marker_score_core(
         object = object,
@@ -66,11 +60,9 @@ marker_score <- function(
         object_type = "Seurat"
       )
     )
-
   }
 
   if (inherits(object, "SingleCellExperiment")) {
-
     return(
       marker_score_core(
         object = object,
@@ -79,12 +71,10 @@ marker_score <- function(
         object_type = "SingleCellExperiment"
       )
     )
-
   }
 
   stop(
     "'object' must be a Seurat or SingleCellExperiment object.",
     call. = FALSE
   )
-
 }

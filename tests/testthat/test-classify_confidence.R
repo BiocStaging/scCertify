@@ -1,7 +1,6 @@
 test_that(
   "classify_confidence works with default thresholds",
   {
-
     scores <- c(
       0.2,
       0.6,
@@ -30,14 +29,12 @@ test_that(
         "High"
       )
     )
-
   }
 )
 
 test_that(
   "classify_confidence supports custom thresholds",
   {
-
     scores <- c(
       0.3,
       0.6,
@@ -58,38 +55,29 @@ test_that(
         "High"
       )
     )
-
   }
 )
 
 test_that(
   "classify_confidence validates thresholds",
   {
-
     expect_error(
-
       classify_confidence(
         c(0.5),
         moderate_threshold = 0.8,
         high_threshold = 0.5
       )
-
     )
-
   }
 )
 
 test_that(
   "classify_confidence requires numeric scores",
   {
-
     expect_error(
-
       classify_confidence(
         c("a", "b")
       )
-
     )
-
   }
 )

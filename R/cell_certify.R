@@ -16,83 +16,69 @@
 #' added to the metadata.
 #'
 #' @examples
-#' if (
-#'   requireNamespace("SingleCellExperiment", quietly = TRUE) &&
-#'   requireNamespace("SummarizedExperiment", quietly = TRUE)
-#' ) {
+#' set.seed(123)
 #'
-#'   set.seed(123)
-#'
-#'   counts <- matrix(
-#'     rpois(1000, lambda = 5),
-#'     nrow = 50,
-#'     ncol = 20,
-#'     dimnames = list(
-#'       paste0("Gene", seq_len(50)),
-#'       paste0("Cell", seq_len(20))
-#'     )
+#' counts <- matrix(
+#'   rpois(1000, lambda = 5),
+#'   nrow = 50,
+#'   ncol = 20,
+#'   dimnames = list(
+#'     paste0("Gene", seq_len(50)),
+#'     paste0("Cell", seq_len(20))
 #'   )
+#' )
 #'
-#'   sce <- SingleCellExperiment::SingleCellExperiment(
-#'     assays = list(
-#'       logcounts = log1p(counts)
-#'     )
+#' sce <- SingleCellExperiment::SingleCellExperiment(
+#'   assays = list(
+#'     logcounts = log1p(counts)
 #'   )
+#' )
 #'
-#'   SummarizedExperiment::colData(sce)$predicted_label <-
-#'     rep(c("T cell", "B cell"), each = 10)
+#' SummarizedExperiment::colData(sce)$predicted_label <-
+#'   rep(c("T cell", "B cell"), each = 10)
 #'
-#'   markers <- list(
-#'     "T cell" = c("Gene1", "Gene2"),
-#'     "B cell" = c("Gene3", "Gene4")
-#'   )
+#' markers <- list(
+#'   "T cell" = c("Gene1", "Gene2"),
+#'   "B cell" = c("Gene3", "Gene4")
+#' )
 #'
-#'   SingleCellExperiment::reducedDim(sce, "PCA") <- prcomp(
-#'     t(counts),
-#'     rank. = 5
-#'   )$x
+#' SingleCellExperiment::reducedDim(sce, "PCA") <- prcomp(
+#'   t(counts),
+#'   rank. = 5
+#' )$x
 #'
-#'   sce <- cell_certify(
-#'     sce,
-#'     markers
-#'   )
+#' sce <- cell_certify(
+#'   sce,
+#'   markers
+#' )
 #'
-#'   head(
-#'     SummarizedExperiment::colData(sce)$confidence_score
-#'   )
-#' }
+#' head(
+#'   SummarizedExperiment::colData(sce)$confidence_score
+#' )
 #'
 #' @export
 
 cell_certify <- function(
-    object,
-    markers,
-    label_column = "predicted_label",
-    moderate_threshold = 0.5,
-    high_threshold = 0.8
+  object,
+  markers,
+  label_column = "predicted_label",
+  moderate_threshold = 0.5,
+  high_threshold = 0.8
 ) {
-
   if (inherits(object, "Seurat")) {
-
     metadata <- object@meta.data
-
   } else if (inherits(object, "SingleCellExperiment")) {
-
     metadata <- as.data.frame(
       SummarizedExperiment::colData(object)
     )
-
   } else {
-
     stop(
       "'object' must be a Seurat or SingleCellExperiment object.",
       call. = FALSE
     )
-
   }
 
   if (!label_column %in% colnames(metadata)) {
-
     stop(
       sprintf(
         "'%s' not found in object metadata.",
@@ -100,44 +86,35 @@ cell_certify <- function(
       ),
       call. = FALSE
     )
-
   }
 
   if (!"entropy_norm" %in% colnames(metadata)) {
-
     warning(
       "'entropy_norm' not found. Using zeros.",
       call. = FALSE
     )
 
     metadata$entropy_norm <- 0
-
   }
 
   if (!"doublet_score" %in% colnames(metadata)) {
-
     warning(
       "'doublet_score' not found. Using zeros.",
       call. = FALSE
     )
 
     metadata$doublet_score <- 0
-
   }
 
   if (inherits(object, "Seurat")) {
-
     object$entropy_norm <- metadata$entropy_norm
     object$doublet_score <- metadata$doublet_score
-
   } else {
-
     SummarizedExperiment::colData(object)$entropy_norm <-
       metadata$entropy_norm
 
     SummarizedExperiment::colData(object)$doublet_score <-
       metadata$doublet_score
-
   }
 
   marker_scores <- marker_score(
@@ -184,14 +161,11 @@ cell_certify <- function(
     )
 
   if (inherits(object, "Seurat")) {
-
     object$marker_score <- marker_scores
     object$neighbor_score <- neighbor_scores
     object$confidence_score <- confidence_score
     object$confidence_class <- confidence_class
-
   } else {
-
     SummarizedExperiment::colData(object)$marker_score <-
       marker_scores
 
@@ -203,9 +177,7 @@ cell_certify <- function(
 
     SummarizedExperiment::colData(object)$confidence_class <-
       confidence_class
-
   }
 
   object
-
 }

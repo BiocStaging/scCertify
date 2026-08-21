@@ -1,23 +1,19 @@
 neighbor_score_core <- function(
-    object,
-    reduction,
-    dims,
-    k,
-    label_column,
-    object_type
+  object,
+  reduction,
+  dims,
+  k,
+  label_column,
+  object_type
 ) {
-
   if (object_type == "Seurat") {
-
     embeddings <- Seurat::Embeddings(
       object,
       reduction = reduction
     )
 
     metadata <- object@meta.data
-
   } else {
-
     rd_names <- SingleCellExperiment::reducedDimNames(
       object
     )
@@ -28,7 +24,6 @@ neighbor_score_core <- function(
     )
 
     if (is.na(match_idx)) {
-
       stop(
         sprintf(
           "Reduction '%s' not found.",
@@ -36,7 +31,6 @@ neighbor_score_core <- function(
         ),
         call. = FALSE
       )
-
     }
 
     embeddings <- SingleCellExperiment::reducedDim(
@@ -49,11 +43,9 @@ neighbor_score_core <- function(
         object
       )
     )
-
   }
 
   if (!label_column %in% colnames(metadata)) {
-
     stop(
       sprintf(
         "'%s' not found in object metadata.",
@@ -61,18 +53,15 @@ neighbor_score_core <- function(
       ),
       call. = FALSE
     )
-
   }
 
   if (is.null(dims)) {
-
     dims <- seq_len(
       min(
         10,
         ncol(embeddings)
       )
     )
-
   }
 
   embeddings <- embeddings[
@@ -98,7 +87,6 @@ neighbor_score_core <- function(
   )
 
   for (i in seq_along(labels)) {
-
     neighbor_labels <- labels[
       nn$nn.index[i, ]
     ]
@@ -106,9 +94,7 @@ neighbor_score_core <- function(
     scores[i] <- mean(
       neighbor_labels == labels[i]
     )
-
   }
 
   scores
-
 }

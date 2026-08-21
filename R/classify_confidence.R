@@ -31,27 +31,22 @@
 #' @export
 
 classify_confidence <- function(
-    scores,
-    moderate_threshold = 0.5,
-    high_threshold = 0.8
+  scores,
+  moderate_threshold = 0.5,
+  high_threshold = 0.8
 ) {
-
   if (!is.numeric(scores)) {
-
     stop(
       "'scores' must be numeric.",
       call. = FALSE
     )
-
   }
 
   if (moderate_threshold >= high_threshold) {
-
     stop(
       "'moderate_threshold' must be smaller than 'high_threshold'.",
       call. = FALSE
     )
-
   }
 
   classes <- ifelse(
@@ -65,5 +60,4 @@ classify_confidence <- function(
   )
 
   classes
-
 }
